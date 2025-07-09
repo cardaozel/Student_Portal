@@ -1,0 +1,4 @@
+net/alwaysdata/demo/runner/RunCucumberTest.class
+net/alwaysdata/demo/steps/StudentSteps.class
+net/alwaysdata/demo/steps/LoginSteps.class
+net/alwaysdata/demo/hooks/BaseHooks.class
