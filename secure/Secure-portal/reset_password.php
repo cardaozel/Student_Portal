@@ -20,21 +20,21 @@ if (empty($_SESSION['csrf_token'])) {
 
 // --- Handle form submission securely ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
-    // Validate CSRF token to prevent CSRF attacks
+    //Validate CSRF token to prevent CSRF attacks
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         die('Invalid CSRF token');
     }
 
     $email = trim($_POST['email'] ?? '');
 
-    // Strictly validate email format
+    //validate email format
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Please enter a valid email address.";
     } else {
         // If rate limiting is enabled, uncomment below
         // $_SESSION['reset_attempts']++;
 
-        // --- Use prepared statement to prevent SQL injection ---
+        //Use prepared statement to prevent SQL injection ---
         try {
             $stmt = $pdo->prepare("SELECT id FROM portal_users WHERE email=? LIMIT 1");
             $stmt->execute([$email]);

@@ -2,8 +2,7 @@
 // Start a secure session with recommended settings before session_start()
 ini_set('session.cookie_httponly', 1);  // Prevent JavaScript access to session cookie
 ini_set('session.use_strict_mode', 1);  // Prevent session fixation
-// Uncomment if using HTTPS to send cookies securely
-// ini_set('session.cookie_secure', 1);
+ini_set('session.cookie_secure', 1);      // Only send session cookie over HTTPS
 
 session_start();
 
@@ -49,30 +48,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL) || empty($password)) {
         $error = "Please enter a valid email and password.";
     } else {
-        // Prepare a secure query to prevent SQL injection
-        $stmt = $pdo->prepare("SELECT id, password FROM portal_users WHERE role='student' AND email=? LIMIT 1");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
+        // --- Wrap DB query in try-catch for secure error handling ---
+        try {
+            // Prepare a secure query to prevent SQL injection
+            $stmt = $pdo->prepare("SELECT id, email, password FROM portal_users WHERE role='student' AND email=? LIMIT 1");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
 
-        // Verify password hash and check login attempts
-        if ($user && password_verify($password, $user['password'])) {
-            // Reset login attempts on successful login
-            $_SESSION['login_attempts'] = 0;
+            // Verify password hash and check login attempts
+            if ($user && password_verify($password, $user['password'])) {
+                // Reset login attempts on successful login
+                $_SESSION['login_attempts'] = 0;
 
-            session_regenerate_id(true); // Prevent session fixation attacks
-            $_SESSION['user_id'] = $user['id']; // Store user ID in session
+                session_regenerate_id(true); // Prevent session fixation attacks
+                $_SESSION['user_id']    = $user['id'];    // Store user ID in session
+                $_SESSION['user_email'] = $user['email']; // Store user email in session
 
-            header('Location: home.php'); // Redirect on success
-            exit;
-        } else {
-            $_SESSION['login_attempts']++; // Increase failed attempt count
-
-            // Lockout after 5 failed attempts - simple example
-            if ($_SESSION['login_attempts'] > 5) {
-                $error = "Too many login attempts. Please try again later.";
+                header('Location: home.php'); // Redirect on success
+                exit;
             } else {
-                $error = "Invalid credentials"; // Show login error
+                $_SESSION['login_attempts']++; // Increase failed attempt count
+
+                // Lockout after 5 failed attempts - simple example
+                if ($_SESSION['login_attempts'] >= 5) {
+                    $error = "Too many login attempts. Please try again later.";
+                } else {
+                    $error = "Invalid credentials"; // Show login error
+                }
             }
+        } catch (PDOException $e) {
+            // Secure error: never show raw DB errors to the user!
+            $error = "Database error. Please try again later.";
+            // error_log($e->getMessage()); // Optional: log for admin/debugging
         }
     }
 }
@@ -107,18 +114,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <!-- Email field -->
         <div class='mb-3'>
             <label class='form-label'>Email</label>
-            <input name='email' class='form-control' type='email' required autofocus>
+            <input name='email' class='form-control' type='text' autofocus>
         </div>
         <!-- Password field -->
         <div class='mb-3'>
             <label class='form-label'>Password</label>
-            <input name='password' class='form-control' type='password' required autocomplete="new-password">
+            <input name='password' class='form-control' type='password' autocomplete="new-password">
         </div>
         <!-- Submit button -->
         <button class='btn btn-primary w-100'>Log in</button>
+        <!-- Forgot password link -->
+        <div class="text-center mt-3">
+            <a href="reset_password.php" class="small text-decoration-none">Forgot your password?</a>
+        </div>
     </form>
 </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/app.js"></script>
 </body>
 </html>

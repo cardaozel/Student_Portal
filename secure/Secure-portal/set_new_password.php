@@ -10,20 +10,20 @@ require 'db.php';
 $error = '';
 $success = '';
 
-// Only allow access if reset_email is set in session (prevents direct access)
+// 1. Only allow access if reset_email is set in session (prevents direct access)
 if (!isset($_SESSION['reset_email'])) {
     header('Location: reset_password.php');
     exit;
 }
 
-// CSRF token setup
+// 2. CSRF token setup
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// On form submit, validate CSRF, input, and update password in DB
+// 3. On form submit, validate CSRF, input, and update password in DB
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Check CSRF token
+    // 3a. Check CSRF token
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         die('Invalid CSRF token');
     }
@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
     } else {
-        // Try/catch for DB update
+        // 3c. Try/catch for DB update
         try {
             $hash = password_hash($password, PASSWORD_DEFAULT);
             $email = $_SESSION['reset_email'];

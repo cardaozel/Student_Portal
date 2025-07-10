@@ -2,33 +2,33 @@
 session_start();
 require 'db.php';
 
-// Check if user is logged in. If not, redirect to login page.
+//Check if user is logged in. If not, redirect to login page.
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
 
-// Get the current user's ID from session.
+//Get the current user's ID from session.
 $id = $_SESSION['user_id'];
 $student = null;
 $result = [];
 $error = null;
 
 try {
-    //Call the correct stored procedure to fetch profile & class info for the student.
+    //Calling the stored procedure to fetch profile & class info for the student.
     $stmt = $pdo->prepare("CALL StudentProfiles(?)");
     $stmt->execute([$id]);
-    $result = $stmt->fetchAll(PDO::FETCH_ASSOC); // Fetch all rows as associative arrays
-    $student = $result[0] ?? null;               // Use the first row as the main student profile
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC); //Fetch all rows as associative arrays
+    $student = $result[0] ?? null;               //Use the first row as the main student profile
 
-    // Release the connection for future queries (important after CALL)
+    //Release the connection
     $stmt->closeCursor();
 
 } catch (PDOException $e) {
-    // If a database error occurs, show a generic message (never expose raw DB errors to users)
+    //If a database error occurs, show a generic message
     $student = null;
     $error = "Database error. Please try again later.";
-    // error_log($e->getMessage()); // Optional: log error for debugging
+  
 }
 ?>
 <!doctype html>
@@ -54,10 +54,10 @@ try {
     <!-- Show error alert if something went wrong -->
     <div class="alert alert-danger shadow-sm"><?= htmlspecialchars($error) ?></div>
   <?php elseif (!$student): ?>
-    <!-- Show warning if no student profile was found -->
+    <!--  Show warning if no student profile was found -->
     <div class="alert alert-warning shadow-sm">No profile found for your account.</div>
   <?php else: ?>
-    <!-- Display user profile information -->
+    <!--  Display user profile information -->
     <div class="card shadow-sm mb-4">
       <div class="card-header bg-primary text-white fw-bold">Profile</div>
       <div class="card-body">

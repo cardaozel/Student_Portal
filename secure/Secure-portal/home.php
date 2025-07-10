@@ -8,55 +8,37 @@ if (!isset($_SESSION['user_id'])) {
 // Include the database connection using PDO
 require 'db.php';
 
-
-// Get the logged-in user's ID from session
+// Get the logged-in user's ID from session ID=3
 $uid = $_SESSION['user_id'];
 
 try {
-    // Use prepared statement to prevent SQL injection for profile query
-    $profileSql = "SELECT sp.*, ap.name AS program_name, ap.total_semesters
-                   FROM student_profiles sp
-                   LEFT JOIN academic_programs ap ON ap.id = sp.program_id
-                   WHERE sp.user_id = ?";
-    $stmt = $pdo->prepare($profileSql);
+    // Use stored procedure to prevent SQL injection for profile query
+    $stmt = $pdo->prepare("CALL StudentInformation(?)");
     $stmt->execute([$uid]);
     $student = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
 
     // If no student found, redirect to login (session might be invalid)
     if (!$student) {
         header('Location: login.php');
         exit;
     }
-    // ---------------- Fetch Courses ----------------
-    // Prepared statement for courses
-    $cSql = "SELECT cc.course_code, cc.course_name, co.room_number, co.duration_hours,
-                    pp.first_name AS prof_fn, pp.family_name AS prof_ln
-             FROM   student_enrolments se
-             JOIN   class_offerings co ON co.id = se.class_id
-             JOIN   course_catalog cc ON cc.id = co.course_id
-             JOIN   portal_users pu ON pu.id = co.professor_user_id
-             JOIN   professor_profiles pp ON pp.user_id = pu.id
-             WHERE  se.student_user_id = ?";
-    $stmt = $pdo->prepare($cSql);
+    $stmt = $pdo->prepare("CALL StundetCourses(?)"); 
     $stmt->execute([$uid]);
     $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-     // ---------------- Fetch Exams ----------------
-    // Prepared statement for exams
-    $eSql = "SELECT e.exam_date,
-                    TIME_FORMAT(e.exam_time,'%H:%i') AS time,
-                    e.exam_type,
-                    cc.course_name
-             FROM   student_exams e
-             JOIN   class_offerings co ON co.id = e.class_id
-             JOIN   course_catalog cc ON cc.id = co.course_id
-             WHERE  e.student_user_id = ?";
-    $stmt = $pdo->prepare($eSql);
+    $stmt->closeCursor();
+
+    // Call stored procedure for exams
+    $stmt = $pdo->prepare("CALL StudentExams(?)");
     $stmt->execute([$uid]);
     $exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
 
 } catch (PDOException $e) {
     // Handle and log any unexpected DB errors
     error_log("Database error in home.php: " . $e->getMessage());
+    // For debugging (remove/comment in production): 
+    // die($e->getMessage());
     die("Internal Server Error. Please try again later.");
 }
 
@@ -71,7 +53,7 @@ try {
 </head>
 <body class='bg-body-tertiary p-4'>
 <div class='container'>
-    <?php include 'nav.inc.php'; ?>  <!-- Navigation bar -->
+    <?php include 'nav.inc.php'; ?>
 
     <div class='card shadow-sm mb-4'>
         <div class='card-header bg-primary text-white'>Profile</div>
